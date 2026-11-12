@@ -5,6 +5,8 @@ description = "FastAPI service hosting the front desk and consultation agents"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
+    "pydantic-settings>=2.6",
+    "squareup>=46",
     "uvicorn>=0.32",
 ]
 
