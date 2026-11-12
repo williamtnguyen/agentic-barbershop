@@ -67,7 +67,7 @@ Each line is roughly one small PR.
 
 **Phase 0: foundations**
 - [x] Repo skeleton, CI, health endpoint
-- [ ] Square client: services, availability, booking (timezone-correct), customers by phone
+- [x] Square client: services, availability, booking (timezone-correct), customers by phone
 - [ ] Front desk agent v0 with Square tools, local chat CLI
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
@@ -101,3 +101,9 @@ uv run --package agent-service uvicorn agent_service.app:app --reload   # run th
 ```
 
 Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
+
+Read-only check against your Square account (lists services and the next open slots):
+
+```bash
+uv run --package agent-service python -m agent_service.square.smoke
+```
