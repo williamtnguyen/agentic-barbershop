@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Infra
+cdk.out/
+
+# Secrets and local state
+.env
+.env.*
+!.env.example
+*.pem
+*.pkl
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
