@@ -34,7 +34,7 @@ flowchart LR
   classDef agent fill:#E1F5EE,stroke:#0F6E56,color:#04342C
   classDef data fill:#FAECE7,stroke:#993C1D,color:#4A1B0C
   classDef planned stroke-dasharray:6 4
-  class clients,barber,frontdesk,consult,memory planned
+  class clients,barber,consult,memory planned
 ```
 
 Purple: people. Blue: our service. Green: agents. Orange: data and Square.
@@ -68,7 +68,7 @@ Each line is roughly one small PR.
 **Phase 0: foundations**
 - [x] Repo skeleton, CI, health endpoint
 - [x] Square client: services, availability, booking (timezone-correct), customers by phone
-- [ ] Front desk agent v0 with Square tools, local chat CLI
+- [x] Front desk agent v0 with Square tools, local chat CLI
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
 
@@ -101,6 +101,13 @@ uv run --package agent-service uvicorn agent_service.app:app --reload   # run th
 ```
 
 Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
+
+Chat with the front desk agent in your terminal. `SQUARE_MODE=fake` uses an in-memory
+shop (sample services, Thursday and Saturday hours), so it only needs model access:
+
+```bash
+uv run --package agent-service python -m agent_service.chat --phone 4085550123
+```
 
 Read-only check against your Square account (lists services and the next open slots):
 
