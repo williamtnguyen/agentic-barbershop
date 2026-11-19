@@ -29,4 +29,5 @@ known-first-party = ["agent_service"]
 
 [tool.pytest.ini_options]
 testpaths = ["services"]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib -m 'not scenario'"
+markers = ["scenario: conversations with a real model (run with: pytest -m scenario)"]
