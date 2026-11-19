@@ -69,6 +69,8 @@ Each line is roughly one small PR.
 - [x] Repo skeleton, CI, health endpoint
 - [x] Square client: services, availability, booking (timezone-correct), customers by phone
 - [x] Front desk agent v0 with Square tools, local chat CLI
+- [x] `/chat` endpoint with per-conversation memory (in process for now)
+- [ ] Scenario tests: scripted conversations against a real model
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
 
@@ -107,6 +109,15 @@ shop (sample services, Thursday and Saturday hours), so it only needs model acce
 
 ```bash
 uv run --package agent-service python -m agent_service.chat --phone 4085550123
+```
+
+Or over HTTP, the way texting and the website will use it. Start the service, then send
+messages; reuse the returned `conversation_id` to continue a conversation:
+
+```bash
+uv run --package agent-service uvicorn agent_service.app:app --reload
+curl -s localhost:8000/chat -H 'content-type: application/json' \
+  -d '{"message": "any openings saturday?", "phone": "4085550123"}'
 ```
 
 Read-only check against your Square account (lists services and the next open slots):
