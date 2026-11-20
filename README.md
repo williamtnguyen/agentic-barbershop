@@ -70,7 +70,7 @@ Each line is roughly one small PR.
 - [x] Square client: services, availability, booking (timezone-correct), customers by phone
 - [x] Front desk agent v0 with Square tools, local chat CLI
 - [x] `/chat` endpoint with per-conversation memory (in process for now)
-- [ ] Scenario tests: scripted conversations against a real model
+- [x] Scenario tests: scripted conversations against a real model
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
 
@@ -98,7 +98,8 @@ Each line is roughly one small PR.
 uv sync                      # install workspace + dev tools
 uv run ruff check .          # lint
 uv run ruff format .         # format
-uv run pytest                # tests
+uv run pytest                # tests (no model calls)
+uv run pytest -m scenario -v # conversations with a real model (needs model access)
 uv run --package agent-service uvicorn agent_service.app:app --reload   # run the service
 ```
 

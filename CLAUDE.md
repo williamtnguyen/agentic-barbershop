@@ -11,6 +11,7 @@
 - Small PRs: one capability each, with tests. Keep the README roadmap checklist and the
   architecture diagram's `planned` class in sync with what a PR ships.
 - Before pushing: `uv run ruff check . && uv run ruff format --check . && uv run pytest`.
+- After changing the agent's prompt or tools, also run `uv run pytest -m scenario` (real model).
 - No AI attribution in commits or PRs: no `Co-Authored-By` trailers, session links or "Generated with" footers.
 - One focused commit per PR where possible; squash fixups before pushing.
 
