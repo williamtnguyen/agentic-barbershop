@@ -108,6 +108,8 @@ Each line is roughly one small PR.
 
 No local setup: everything runs in a cloud Linux machine and opens in your browser.
 
+Full step-by-step, what's testable at each stage and where keys go: [docs/DEVELOPING.md](docs/DEVELOPING.md).
+
 1. On GitHub: **Code → Codespaces → Create codespace on main**. The first start installs
    everything (a few minutes).
 2. In the terminal: `scripts/dev.sh`. It starts the API and the web app; the web app opens in
