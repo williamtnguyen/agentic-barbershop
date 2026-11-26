@@ -7,9 +7,13 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from agent_service import __version__
+from agent_service.booking import Clock, utc_now
+from agent_service.booking_api import router as booking_router
 from agent_service.conversations import ConversationStore, build_conversation_store
 from agent_service.settings import get_settings
+from agent_service.square.backend import BookingBackend
 from agent_service.square.client import normalize_phone
+from agent_service.wiring import build_backend
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +41,34 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-def create_app(store: ConversationStore | None = None) -> FastAPI:
-    """Build the app. Without a store, one is built from settings on the first chat."""
+def create_app(
+    store: ConversationStore | None = None,
+    backend: BookingBackend | None = None,
+    clock: Clock = utc_now,
+) -> FastAPI:
+    """Build the app. Anything not passed in is built from settings on first use.
+
+    The chat agents and the booking API share one Square backend, so bookings made in
+    either place are visible to both (this matters for the in-memory practice shop).
+    """
     app = FastAPI(title="agentic-barbershop agent service", version=__version__)
     app.state.store = store
+    app.state.backend = backend
+    app.state.clock = clock
+
+    def get_backend() -> BookingBackend:
+        if app.state.backend is None:
+            app.state.backend = build_backend(get_settings())
+        return app.state.backend
+
+    app.state.get_backend = get_backend
 
     def get_store(request: Request) -> ConversationStore:
         if request.app.state.store is None:
-            request.app.state.store = build_conversation_store(get_settings())
+            request.app.state.store = build_conversation_store(get_settings(), get_backend())
         return request.app.state.store
+
+    app.include_router(booking_router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

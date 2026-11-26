@@ -2,13 +2,15 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ChatPage } from "./ChatPage";
-import { GREETING } from "./useChat";
+import { App } from "./App";
+import { GREETING } from "./features/chat/useChat";
 
 type Reply = { status?: number; body?: unknown } | Error;
 
 function mockApi(...replies: Reply[]) {
-  const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => {
+  const fetchMock = vi.fn(async (url: string, _init: RequestInit) => {
+    // The Book tab loads services on start; only /chat calls get the scripted replies.
+    if (!url.endsWith("/chat")) return new Response("[]", { status: 200 });
     const next = replies.shift();
     if (!next) throw new Error("no more scripted replies");
     if (next instanceof Error) throw next;
@@ -19,7 +21,16 @@ function mockApi(...replies: Reply[]) {
 }
 
 function sentBodies(fetchMock: ReturnType<typeof mockApi>) {
-  return fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body as string));
+  return fetchMock.mock.calls
+    .filter(([url]) => url.endsWith("/chat"))
+    .map(([, init]) => JSON.parse(init.body as string));
+}
+
+/** Render the app and open the Chat tab. */
+async function renderChat() {
+  window.history.replaceState(null, "", "/");
+  render(<App />);
+  await userEvent.setup().click(screen.getByRole("tab", { name: "Chat" }));
 }
 
 async function type(text: string) {
@@ -28,12 +39,12 @@ async function type(text: string) {
   await user.click(screen.getByRole("button", { name: "Send" }));
 }
 
-describe("ChatPage", () => {
+describe("Chat tab", () => {
   beforeEach(() => vi.unstubAllGlobals());
   afterEach(() => vi.unstubAllGlobals());
 
-  it("opens with a greeting and quick replies", () => {
-    render(<ChatPage />);
+  it("opens with a greeting and quick replies", async () => {
+    await renderChat();
     expect(screen.getByText(GREETING)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Any openings this Saturday?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
@@ -44,7 +55,7 @@ describe("ChatPage", () => {
       { body: { conversation_id: "c1", reply: "Saturday I have 10:00 or 11:30." } },
       { body: { conversation_id: "c1", reply: "Booked for 11:30." } },
     );
-    render(<ChatPage />);
+    await renderChat();
 
     await type("any openings saturday?");
     expect(await screen.findByText("Saturday I have 10:00 or 11:30.")).toBeInTheDocument();
@@ -53,7 +64,7 @@ describe("ChatPage", () => {
     await type("11:30");
     expect(await screen.findByText("Booked for 11:30.")).toBeInTheDocument();
 
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/chat");
+    expect(fetchMock.mock.calls.map(([url]) => url)).toContain("/api/chat");
     expect(sentBodies(fetchMock)).toEqual([
       { message: "any openings saturday?" },
       { message: "11:30", conversation_id: "c1" },
@@ -62,7 +73,7 @@ describe("ChatPage", () => {
 
   it("sends a quick reply when tapped", async () => {
     const fetchMock = mockApi({ body: { conversation_id: "c1", reply: "Full Service, Clipper Cut, Beard Trim." } });
-    render(<ChatPage />);
+    await renderChat();
 
     await userEvent.setup().click(screen.getByRole("button", { name: "What do you offer?" }));
 
@@ -74,7 +85,7 @@ describe("ChatPage", () => {
     const fetchMock = mockApi(new TypeError("network down"), {
       body: { conversation_id: "c1", reply: "Hey! What can I do for you?" },
     });
-    render(<ChatPage />);
+    await renderChat();
 
     await type("hello");
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the front desk");
@@ -89,7 +100,7 @@ describe("ChatPage", () => {
 
   it("explains a server failure", async () => {
     mockApi({ status: 502, body: { detail: "The assistant couldn't respond. Try again." } });
-    render(<ChatPage />);
+    await renderChat();
 
     await type("hi");
 
@@ -97,18 +108,18 @@ describe("ChatPage", () => {
   });
 });
 
-describe("ChatPage composer and new chat", () => {
+describe("Chat tab composer and new chat", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("sends on Enter and adds a line on Shift+Enter", async () => {
     const fetchMock = mockApi({ body: { conversation_id: "c1", reply: "Got it." } });
-    render(<ChatPage />);
+    await renderChat();
     const user = userEvent.setup();
     const box = screen.getByLabelText("Message");
 
     await user.type(box, "fade{Shift>}{Enter}{/Shift}low on the sides");
     expect(box).toHaveValue("fade\nlow on the sides");
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sentBodies(fetchMock)).toEqual([]);
 
     await user.type(box, "{Enter}");
     expect(await screen.findByText("Got it.")).toBeInTheDocument();
@@ -121,7 +132,7 @@ describe("ChatPage composer and new chat", () => {
       { body: { conversation_id: "c1", reply: "Sure, which day?" } },
       { body: { conversation_id: "c2", reply: "Hey again!" } },
     );
-    render(<ChatPage />);
+    await renderChat();
     const user = userEvent.setup();
     expect(screen.getByRole("button", { name: "New chat" })).toBeDisabled();
 

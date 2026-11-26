@@ -5,18 +5,25 @@ or recover instead of crashing the conversation.
 """
 
 from collections.abc import Callable
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Any
 
 from strands import tool
 
+from agent_service.booking import BookingError, book, open_slots, parse_local_time, utc_now
 from agent_service.square.backend import BookingBackend
 from agent_service.square.client import SquareError
 from agent_service.square.models import Service
-from agent_service.square.times import day_range
 
 MAX_SEARCH_DAYS = 14
 MAX_SLOTS_RETURNED = 40
+
+# Error wording aimed at the agent, telling it what to do next.
+TOOL_MESSAGES = {
+    "slot_taken": "That time isn't open. Check find_open_slots again.",
+    "name_required": "New client: ask for their first name before booking.",
+    "bad_time": "start must be YYYY-MM-DDTHH:MM, as returned by find_open_slots.",
+}
 
 
 def _label(dt: datetime) -> str:
@@ -40,7 +47,7 @@ def resolve_service(services: list[Service], name: str) -> Service | str:
 
 def build_tools(backend: BookingBackend, clock: Callable[[], datetime] | None = None) -> list[Any]:
     tz = backend.tz
-    now = clock or (lambda: datetime.now(UTC))
+    now = clock or utc_now
 
     @tool
     def list_services() -> list[dict]:
@@ -78,12 +85,8 @@ def build_tools(backend: BookingBackend, clock: Callable[[], datetime] | None = 
         if (last - first).days >= MAX_SEARCH_DAYS:
             return {"error": f"Search at most {MAX_SEARCH_DAYS} days at a time."}
 
-        start = max(day_range(first, tz)[0], now().astimezone(tz))
-        end = day_range(last, tz)[1]
-        if end <= start:
-            return {"service": found.name, "slots": [], "note": "Those dates are in the past."}
         try:
-            slots = backend.find_availability(found, start, end)
+            slots = open_slots(backend, found, first, last, now)
         except (SquareError, ValueError) as error:
             return {"error": str(error)}
         return {
@@ -137,24 +140,12 @@ def build_tools(backend: BookingBackend, clock: Callable[[], datetime] | None = 
         if isinstance(found, str):
             return {"error": found}
         try:
-            parsed = datetime.fromisoformat(start)
-            wanted = parsed.astimezone(tz) if parsed.tzinfo else parsed.replace(tzinfo=tz)
-        except ValueError:
-            return {"error": "start must be YYYY-MM-DDTHH:MM, as returned by find_open_slots."}
-
-        try:
-            day_start, day_end = day_range(wanted.date(), tz)
-            slots = backend.find_availability(found, max(day_start, now()), day_end)
-            slot = next((s for s in slots if s.start_at == wanted), None)
-            if slot is None:
-                return {"error": "That time isn't open. Check find_open_slots again."}
-
-            customer = backend.find_customer_by_phone(phone)
-            if customer is None:
-                if not first_name:
-                    return {"error": "New client: ask for their first name before booking."}
-                customer = backend.create_customer(phone, first_name, last_name)
-            booking = backend.create_booking(slot, customer.id, note)
+            wanted = parse_local_time(start, backend)
+            booking, customer = book(
+                backend, found, wanted, phone, first_name, last_name, note, now=now
+            )
+        except BookingError as error:
+            return {"error": TOOL_MESSAGES[error.code]}
         except (SquareError, ValueError) as error:
             return {"error": str(error)}
 

@@ -79,9 +79,7 @@ Each line is roughly one small PR.
 - [x] AWS profile support for local Bedrock calls, run-locally guide
 - [x] Web app (React): chat with the front desk, runs locally and builds for production
 - [x] Codespaces dev environment and one-command local start
-
-**Next: usable without AWS**
-- [ ] Booking calendar: pick a service, day and time without chatting
+- [x] Booking calendar: pick a service, day and time without chatting
 
 **Deploy**
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager + S3/CloudFront (CDK)
@@ -178,7 +176,7 @@ uv run --package agent-service python -m agent_service.square.smoke
 
 ### Web app
 
-The client-facing app in `apps/web/` (React, Vite, TypeScript, Tailwind, shadcn/ui components in `src/components/ui`). It talks to the
+The client-facing app in `apps/web/` (React, Vite, TypeScript, Tailwind, shadcn/ui components in `src/components/ui`). It has two tabs: **Book** (service, day, time, details) and **Chat** (the front desk agent). Booking works without model access. It talks to the
 agent service through `/api`, which the dev server forwards to `localhost:8000`.
 
 ```bash

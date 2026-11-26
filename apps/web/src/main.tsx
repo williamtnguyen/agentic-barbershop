@@ -5,12 +5,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { config } from "./config";
-import { ChatPage } from "./features/chat/ChatPage";
+import { App } from "./App";
 
 document.title = config.businessName;
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ChatPage />
+    <App />
   </StrictMode>,
 );
