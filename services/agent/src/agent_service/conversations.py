@@ -12,6 +12,7 @@ from typing import Any, Protocol
 
 from agent_service.agents.front_desk import create_front_desk_agent
 from agent_service.settings import Settings
+from agent_service.square.backend import BookingBackend
 from agent_service.wiring import build_backend, build_model
 
 
@@ -58,8 +59,10 @@ class ConversationStore:
         return conversation_id, str(result).strip()
 
 
-def build_conversation_store(settings: Settings) -> ConversationStore:
-    backend = build_backend(settings)
+def build_conversation_store(
+    settings: Settings, backend: BookingBackend | None = None
+) -> ConversationStore:
+    backend = backend or build_backend(settings)
     model = build_model(settings)
 
     def factory(phone: str | None) -> ChatAgent:
