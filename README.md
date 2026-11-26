@@ -51,13 +51,13 @@ Square as needed), then replies through the Twilio API. Twilio gives a webhook o
 | Path | What | Status |
 |---|---|---|
 | `services/agent/` | Python service: FastAPI app, Strands agents, Square/Twilio integrations | skeleton |
-| `apps/web/` | Next.js site, consult page, compliance pages | planned |
+| `apps/web/` | React web app (Vite + TypeScript + Tailwind + shadcn/ui): chat now; consult page and site later | chat |
 | `infra/` | AWS CDK (TypeScript) | planned |
 
 ## Stack
 
 - **Python 3.13** for the agent service: agents ([Strands](https://strandsagents.com)), Square SDK, MediaPipe.
-- **TypeScript** for the web app (Next.js), in-browser MediaPipe and AWS CDK.
+- **TypeScript** for the web app (React + Vite + Tailwind), in-browser MediaPipe and AWS CDK.
 - **FastAPI** in front of the agents: async (agents mostly wait on Bedrock and Square), Pydantic models, streaming responses for web chat.
 - **uv** for Python packaging, **ruff** for lint/format, **pytest** for tests.
 
@@ -72,6 +72,7 @@ Each line is roughly one small PR.
 - [x] `/chat` endpoint with per-conversation memory (in process for now)
 - [x] Scenario tests: scripted conversations against a real model
 - [x] AWS profile support for local Bedrock calls, run-locally guide
+- [x] Web app (React): chat with the front desk, runs locally and builds for production
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
 
@@ -148,3 +149,18 @@ Read-only check against your Square account (lists services and the next open sl
 ```bash
 uv run --package agent-service python -m agent_service.square.smoke
 ```
+
+### Web app
+
+The client-facing app in `apps/web/` (React, Vite, TypeScript, Tailwind, shadcn/ui components in `src/components/ui`). It talks to the
+agent service through `/api`, which the dev server forwards to `localhost:8000`.
+
+```bash
+uv run --package agent-service uvicorn agent_service.app:app --reload   # terminal 1: API
+cd apps/web && npm install && npm run dev                               # terminal 2: open localhost:5173
+npm test            # UI tests
+npm run build       # production build in apps/web/dist (static files)
+```
+
+In production the built files are served as a static site, with `/api` routed to the agent
+service (set up with the AWS infrastructure). Settings live in `apps/web/.env.example`.

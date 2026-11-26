@@ -17,5 +17,5 @@
 
 ## Layout
 - `services/agent/`: Python 3.13, FastAPI, Strands agents. Package `agent_service` under `src/`.
-- `apps/web/`: Next.js (planned).
+- `apps/web/`: React + Vite + TypeScript + Tailwind + shadcn/ui (`components.json`; add components with `npx shadcn@latest add <name>`). Before pushing web changes: `npm run typecheck && npm test && npm run build` in `apps/web`.
 - `infra/`: AWS CDK in TypeScript (planned).
