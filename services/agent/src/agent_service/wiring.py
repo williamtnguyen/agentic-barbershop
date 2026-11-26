@@ -26,7 +26,18 @@ def build_model(settings: Settings) -> Model:
             max_tokens=1024,
         )
 
+    import boto3
+    from botocore.exceptions import ProfileNotFound
     from strands.models import BedrockModel
 
+    try:
+        session = boto3.Session(
+            profile_name=settings.aws_profile or None, region_name=settings.aws_region
+        )
+    except ProfileNotFound as error:
+        raise ValueError(
+            f"AWS profile '{settings.aws_profile}' not found. Run `aws configure sso` "
+            "or fix AWS_PROFILE."
+        ) from error
     config = {"model_id": settings.bedrock_model_id} if settings.bedrock_model_id else {}
-    return BedrockModel(region_name=settings.aws_region, **config)
+    return BedrockModel(boto_session=session, **config)

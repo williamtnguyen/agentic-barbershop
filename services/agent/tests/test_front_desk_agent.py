@@ -42,3 +42,11 @@ def test_wiring_picks_fake_square_and_requires_api_key(settings):
     assert type(build_backend(settings)).__name__ == "FakeSquareGateway"
     with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
         build_model(settings.model_copy(update={"anthropic_api_key": ""}))
+
+
+def test_missing_aws_profile_gives_a_clear_error(settings):
+    bedrock = settings.model_copy(
+        update={"model_provider": "bedrock", "aws_profile": "no-such-profile-xyz"}
+    )
+    with pytest.raises(ValueError, match="aws configure sso"):
+        build_model(bedrock)
