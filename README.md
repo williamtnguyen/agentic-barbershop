@@ -71,6 +71,7 @@ Each line is roughly one small PR.
 - [x] Front desk agent v0 with Square tools, local chat CLI
 - [x] `/chat` endpoint with per-conversation memory (in process for now)
 - [x] Scenario tests: scripted conversations against a real model
+- [x] AWS profile support for local Bedrock calls, run-locally guide
 - [ ] Infra: Lambda + API Gateway + DynamoDB + Secrets Manager (CDK)
 - [ ] Square webhook endpoint with signature verification
 
@@ -91,6 +92,27 @@ Each line is roughly one small PR.
 **Phase 3: consult page** live MediaPipe overlay, snapshot to agent, book from result
 
 **Later:** payments ledger and reminders, dashboard, try-on images, full site and portfolio
+
+## Run it locally
+
+Talk to the front desk with Claude on Bedrock and a fake shop (no Square account needed).
+
+1. **Install** [uv](https://docs.astral.sh/uv/) and the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), then `uv sync --all-packages`.
+2. **AWS access** (one time):
+   - An AWS account with a payment method on file.
+   - A user with the `AmazonBedrockFullAccess` policy, signed in on your machine with
+     `aws configure sso` (gives you a named profile).
+   - In the Bedrock console, open **Model catalog**, pick an Anthropic Claude model and submit
+     the one-time use-case form if it asks. Claude is enabled on the first call; that can
+     take up to 15 minutes, during which calls may return `AccessDeniedException`.
+3. **Configure:** `cp .env.example .env`, keep `SQUARE_MODE=fake`, set `AWS_PROFILE` to your
+   profile name (and `AWS_REGION` if not `us-west-2`).
+4. **Chat:** `uv run --package agent-service python -m agent_service.chat --phone 4085550123`
+   (terminal), or start the API with
+   `uv run --package agent-service uvicorn agent_service.app:app --reload` and POST to `/chat`.
+5. **Check it:** `uv run pytest -m scenario -v` runs 10 scripted conversations against Claude.
+
+No AWS yet? Set `MODEL_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` instead.
 
 ## Development
 

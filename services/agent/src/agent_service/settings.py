@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # Model: Claude on Bedrock (default) or the Anthropic API
     model_provider: Literal["bedrock", "anthropic"] = "bedrock"
+    aws_profile: str = ""  # named AWS CLI profile; empty = default credential chain
     aws_region: str = "us-west-2"
     bedrock_model_id: str = ""  # empty = Strands' default Claude model on Bedrock
     anthropic_api_key: str = ""
