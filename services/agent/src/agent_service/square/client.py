@@ -46,6 +46,36 @@ def _error_message(error: ApiError) -> str:
     return "; ".join(d for d in details if d) or f"Square API error (HTTP {error.status_code})"
 
 
+def resolve_location_id(client: Any, configured: str = "") -> str:
+    """Check SQUARE_LOCATION_ID against the account, or pick its only active location.
+
+    A token and a location ID from different Square accounts (for example a sandbox token
+    with a production location) is a common setup mistake, so the error lists what exists.
+    """
+    try:
+        locations = client.locations.list().locations or []
+    except ApiError as error:
+        raise SquareError(_error_message(error)) from error
+    active = [loc for loc in locations if loc.status in (None, "ACTIVE")]
+    options = ", ".join(f"{loc.name} ({loc.id})" for loc in active) or "none"
+
+    if configured:
+        if any(loc.id == configured for loc in active):
+            return configured
+        raise SquareError(
+            f"SQUARE_LOCATION_ID {configured} isn't an active location for this access token. "
+            f"Locations for this token: {options}. Check that the token and location come "
+            "from the same Square account (sandbox vs production)."
+        )
+    if len(active) == 1:
+        return active[0].id
+    if not active:
+        raise SquareError("This Square account has no active locations.")
+    raise SquareError(
+        f"This account has several locations. Set SQUARE_LOCATION_ID to one of: {options}"
+    )
+
+
 class SquareGateway:
     def __init__(self, client: Any, location_id: str, tz: ZoneInfo):
         self._client = client
@@ -54,13 +84,19 @@ class SquareGateway:
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "SquareGateway":
+        if not settings.square_access_token:
+            raise SquareError(
+                "SQUARE_ACCESS_TOKEN isn't set. Add it as a Codespaces secret or in .env, "
+                "or use SQUARE_MODE=fake for the practice shop."
+            )
         environment = (
             SquareEnvironment.PRODUCTION
             if settings.square_environment == "production"
             else SquareEnvironment.SANDBOX
         )
         client = Square(token=settings.square_access_token, environment=environment)
-        return cls(client, settings.square_location_id, settings.tz)
+        location_id = resolve_location_id(client, settings.square_location_id)
+        return cls(client, location_id, settings.tz)
 
     def list_services(self) -> list[Service]:
         """Bookable appointment services at this location."""

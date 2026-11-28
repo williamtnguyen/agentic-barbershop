@@ -12,12 +12,16 @@ from square.types.catalog_item_variation import CatalogItemVariation
 from square.types.catalog_object import CatalogObject_Item, CatalogObject_ItemVariation
 from square.types.create_booking_response import CreateBookingResponse
 from square.types.customer import Customer as SquareCustomer
+from square.types.list_locations_response import ListLocationsResponse
+from square.types.location import Location
 from square.types.money import Money
 from square.types.search_availability_response import SearchAvailabilityResponse
 from square.types.search_catalog_items_response import SearchCatalogItemsResponse
 from square.types.search_customers_response import SearchCustomersResponse
 
+from agent_service.settings import Settings
 from agent_service.square import Service, Slot, SquareError, SquareGateway, normalize_phone
+from agent_service.square.client import resolve_location_id
 
 LA = ZoneInfo("America/Los_Angeles")
 LOCATION = "LOC1"
@@ -253,3 +257,55 @@ def test_api_errors_become_square_errors_with_detail():
 
     with pytest.raises(SquareError, match="Invalid start_at_range"):
         gateway.find_availability(SERVICE, start, start + timedelta(days=1))
+
+
+# --- Location lookup -------------------------------------------------------------
+
+
+def locations_client(*locations):
+    client = MagicMock()
+    client.locations.list.return_value = ListLocationsResponse(locations=list(locations))
+    return client
+
+
+MAIN = Location(id="L_MAIN", name="Main St", status="ACTIVE")
+CLOSED = Location(id="L_OLD", name="Old shop", status="INACTIVE")
+SECOND = Location(id="L_TWO", name="Second shop", status="ACTIVE")
+
+
+def test_uses_the_only_active_location_when_none_is_set():
+    assert resolve_location_id(locations_client(MAIN, CLOSED)) == "L_MAIN"
+
+
+def test_keeps_a_configured_location_that_exists():
+    assert resolve_location_id(locations_client(MAIN, SECOND), "L_TWO") == "L_TWO"
+
+
+def test_a_location_from_another_account_lists_the_real_ones():
+    with pytest.raises(SquareError, match=r"LCY6 isn't an active location.*Main St \(L_MAIN\)"):
+        resolve_location_id(locations_client(MAIN), "LCY6")
+
+
+def test_several_locations_ask_which_one():
+    with pytest.raises(SquareError, match=r"Set SQUARE_LOCATION_ID to one of: Main St"):
+        resolve_location_id(locations_client(MAIN, SECOND))
+
+
+def test_no_active_locations():
+    with pytest.raises(SquareError, match="no active locations"):
+        resolve_location_id(locations_client(CLOSED))
+
+
+def test_location_lookup_api_errors_become_square_errors():
+    client = MagicMock()
+    client.locations.list.side_effect = ApiError(
+        status_code=401, body={"errors": [{"code": "UNAUTHORIZED", "detail": "Bad token"}]}
+    )
+    with pytest.raises(SquareError, match="Bad token"):
+        resolve_location_id(client)
+
+
+def test_from_settings_needs_a_token():
+    settings = Settings(_env_file=None, square_access_token="")
+    with pytest.raises(SquareError, match="SQUARE_ACCESS_TOKEN isn't set"):
+        SquareGateway.from_settings(settings)

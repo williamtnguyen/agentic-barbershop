@@ -6,6 +6,7 @@
     "ghcr.io/devcontainers/features/aws-cli:1": {}
   },
   "hostRequirements": { "cpus": 2 },
+  "containerEnv": { "UV_LINK_MODE": "copy" },
   "postCreateCommand": "bash .devcontainer/setup.sh",
   "forwardPorts": [5173, 8000],
   "portsAttributes": {

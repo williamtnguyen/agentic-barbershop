@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     port: 5173,
+    // In Codespaces, listen on all interfaces so the port is detected and forwarded.
+    host: process.env.CODESPACES === "true" ? "0.0.0.0" : "localhost",
     // Codespaces serves forwarded ports from *.app.github.dev.
     allowedHosts: [".app.github.dev"],
     proxy: {

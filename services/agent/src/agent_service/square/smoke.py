@@ -5,16 +5,25 @@
 Reads SQUARE_* and BUSINESS_TIMEZONE from the environment or .env. Never books anything.
 """
 
+import sys
 from datetime import datetime, timedelta
 
 from agent_service.settings import get_settings
-from agent_service.square import SquareGateway
+from agent_service.square import SquareError, SquareGateway
 
 
 def main() -> None:
+    try:
+        run()
+    except SquareError as error:
+        print(f"Square check failed: {error}", file=sys.stderr)
+        sys.exit(1)
+
+
+def run() -> None:
     settings = get_settings()
     gateway = SquareGateway.from_settings(settings)
-    print(f"Square {settings.square_environment}, location {settings.square_location_id}")
+    print(f"Square {settings.square_environment}, location {gateway.location_id}")
 
     services = gateway.list_services()
     for service in services:
