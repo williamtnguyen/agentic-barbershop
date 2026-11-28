@@ -52,7 +52,7 @@ sees new or changed secrets after you stop and restart it.
 | `SQUARE_MODE` | `fake` (practice shop) or `live` (Square) | Your choice |
 | `SQUARE_ENVIRONMENT` | `sandbox` or `production` | Your choice; stay on `sandbox` for testing |
 | `SQUARE_ACCESS_TOKEN` | Square API token | Square Developer Console → your app → **Credentials** |
-| `SQUARE_LOCATION_ID` | Which location to book into | Square Developer Console → your app → **Locations** |
+| `SQUARE_LOCATION_ID` | Optional; which location to book into. Leave empty if the account has one location | Square Developer Console → your app → **Locations** |
 | `MODEL_PROVIDER` | `bedrock` (default) or `anthropic` | Your choice |
 | `AWS_PROFILE`, `AWS_REGION` | Which AWS sign-in and region to use for Bedrock | Section 5 |
 | `BEDROCK_MODEL_ID` | Optional; empty uses Strands' default Claude model | Bedrock console → **Model catalog** |
@@ -92,9 +92,12 @@ as Codespaces secrets.
 1. At <https://developer.squareup.com>, open (or create) your app and switch to **Sandbox**.
 2. From the sandbox test account, open the **Square Dashboard** and set up Appointments:
    add your services, mark them bookable online, and set your availability.
-3. Copy the sandbox **access token** and **location ID** into Codespaces secrets
-   `SQUARE_ACCESS_TOKEN` and `SQUARE_LOCATION_ID`, and set `SQUARE_MODE=live`,
-   `SQUARE_ENVIRONMENT=sandbox`.
+3. Copy the sandbox **access token** into the Codespaces secret `SQUARE_ACCESS_TOKEN`,
+   and set `SQUARE_MODE=live` and `SQUARE_ENVIRONMENT=sandbox`. The app uses the
+   account's only location automatically; set `SQUARE_LOCATION_ID` only if there are
+   several. The token and location must come from the same account: a production
+   location ID with a sandbox token fails with "Location not found", and the check below
+   lists the right IDs.
 4. Restart the codespace, then run the read-only check:
    `uv run --package agent-service python -m agent_service.square.smoke`. It should list
    your services and the next open times.

@@ -4,6 +4,7 @@ import logging
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 
 from agent_service import __version__
@@ -69,6 +70,11 @@ def create_app(
         return request.app.state.store
 
     app.include_router(booking_router)
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        """The API has no page of its own; send people to its interactive docs."""
+        return RedirectResponse("/docs")
 
     @app.get("/health")
     def health() -> dict[str, str]:
